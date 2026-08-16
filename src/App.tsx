@@ -1,18 +1,48 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { VotingState } from "./types";
-import { createInitialState, castVote, getVotesCastCount, getWinner } from "./logic";
+import {
+  createInitialState,
+  castVote,
+  getVotesCastCount,
+  getWinner,
+} from "./logic";
 
 const VOTER_NAMES = [
-  "Austin", "Lilian", "Majesty", "Chidimma", "Ifeanyi", "Stephanie", "Rita",
-  "Christopher", "Bonaventure", "Victor", "Amarachi", "Charles", "Abigail",
-  "Loveth", "James", "David", "Anthony", "Kosisochukwu", "Gabriel", "Peter",
+  "Austin",
+  "Lilian",
+  "Majesty",
+  "Chidimma",
+  "Ifeanyi",
+  "Stephanie",
+  "Rita",
+  "Christopher",
+  "Bonaventure",
+  "Victor",
+  "Amarachi",
+  "Charles",
+  "Abigail",
+  "Loveth",
+  "James",
+  "David",
+  "Anthony",
+  "Kosisochukwu",
+  "Gabriel",
+  "Peter",
 ];
-const CANDIDATE_NAMES = ["Kosisochukwu", "Austin", "Lilian", "Ifeanyi", "Victor", "Amara"];
+const CANDIDATE_NAMES = [
+  "Kosisochukwu",
+  "Austin",
+  "Amara",
+  "Ifeanyi",
+  "Stephanie",
+  "Charles",
+];
 const AVATAR_COLORS = ["#F5B700", "#12B886", "#FF5D5D", "#8B5CF6"];
+const STORAGE_KEY = "voting-ui-state";
 
-// Admin Password to view the votes
+// Admin Password to view the vote
 
-const ADMIN_PASSWORD = "Admin@1234";
+const ADMIN_PASSWORD = "1234";
 
 function getAvatarColor(index: number): string {
   return AVATAR_COLORS[index % AVATAR_COLORS.length];
@@ -22,10 +52,21 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+function loadInitialState(): VotingState {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved) as VotingState;
+    } catch {
+      // Corrupted/invalid saved data — fall back to a fresh state
+      return createInitialState(VOTER_NAMES, CANDIDATE_NAMES);
+    }
+  }
+  return createInitialState(VOTER_NAMES, CANDIDATE_NAMES);
+}
+
 function App() {
-  const [state, setState] = useState<VotingState>(() =>
-    createInitialState(VOTER_NAMES, CANDIDATE_NAMES)
-  );
+  const [state, setState] = useState<VotingState>(loadInitialState);
 
   const [voterQuery, setVoterQuery] = useState("");
   const [voterName, setVoterName] = useState("");
@@ -50,13 +91,21 @@ function App() {
   const progressPct = Math.round((votesCast / totalVoters) * 100);
 
   const filteredVoters = VOTER_NAMES.filter((name) =>
-    name.toLowerCase().includes(voterQuery.toLowerCase())
+    name.toLowerCase().includes(voterQuery.toLowerCase()),
   );
+
+  // Persist state to localStorage every time it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
 
   // Close voter dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (voterBoxRef.current && !voterBoxRef.current.contains(e.target as Node)) {
+      if (
+        voterBoxRef.current &&
+        !voterBoxRef.current.contains(e.target as Node)
+      ) {
         setIsVoterListOpen(false);
       }
     }
@@ -139,6 +188,13 @@ function App() {
     setIsAdmin(false);
   }
 
+  function resetVoting() {
+    if (!confirm("Reset all votes? This can't be undone.")) return;
+    const fresh = createInitialState(VOTER_NAMES, CANDIDATE_NAMES);
+    setState(fresh);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   const showResults = allVotesIn || isAdmin;
 
   return (
@@ -154,19 +210,24 @@ function App() {
 
       {/* Header */}
       <div className="max-w-3xl mx-auto px-6 pt-16 pb-10 text-center">
-        <p className="font-mono text-xs tracking-[0.3em] text-gold uppercase mb-3">
-          Official Ballot
+        <h1 className="font-display text-4xl sm:text-5xl font-bold">
+          Head of House
+        </h1>
+        <p className="text-muted mt-2">
+          HackathonAfrica 3.0 · General Election
         </p>
-        <h1 className="font-display text-4xl sm:text-5xl font-bold">Head of House</h1>
-        <p className="text-muted mt-2">HackathonAfrica 3.0 · General Election</p>
 
         <div className="mt-8 flex items-center justify-center gap-8 font-mono text-sm text-muted">
           <div>
-            <span className="text-ivory text-lg font-semibold">{totalVoters}</span> members
+            <span className="text-ivory text-lg font-semibold">
+              {totalVoters}
+            </span>{" "}
+            members
           </div>
           <div className="w-px h-8 bg-line" />
           <div>
-            <span className="text-gold text-lg font-semibold">{votesCast}</span>/{totalVoters} votes cast
+            <span className="text-gold text-lg font-semibold">{votesCast}</span>
+            /{totalVoters} votes cast
           </div>
         </div>
 
@@ -181,8 +242,12 @@ function App() {
       {/* Voter search */}
       <div className="max-w-md mx-auto px-6">
         <div className="bg-surface border border-line rounded-2xl p-6">
-          <h2 className="font-display text-lg font-semibold mb-1">Find your name</h2>
-          <p className="text-sm text-muted mb-4">Search the voter roll to identify yourself.</p>
+          <h2 className="font-display text-lg font-semibold mb-1">
+            Find your name
+          </h2>
+          <p className="text-sm text-muted mb-4">
+            Search the voter roll to identify yourself.
+          </p>
 
           <div ref={voterBoxRef} className="relative">
             <input
@@ -196,7 +261,9 @@ function App() {
             {isVoterListOpen && (
               <div className="absolute z-10 mt-2 w-full max-h-56 overflow-y-auto bg-surface-raised border border-line rounded-lg shadow-xl">
                 {filteredVoters.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-muted">No matching names.</p>
+                  <p className="px-4 py-3 text-sm text-muted">
+                    No matching names.
+                  </p>
                 ) : (
                   filteredVoters.map((name) => (
                     <button
@@ -211,7 +278,9 @@ function App() {
                 )}
               </div>
             )}
-            {voterName && <p className="mt-2 text-xs text-teal">Signed in as {voterName}</p>}
+            {voterName && (
+              <p className="mt-2 text-xs text-teal">Signed in as {voterName}</p>
+            )}
           </div>
         </div>
       </div>
@@ -219,8 +288,12 @@ function App() {
       {/* Candidate grid */}
       <div className="max-w-2xl mx-auto px-6 mt-8">
         <div className="bg-surface border border-line rounded-2xl p-6">
-          <h2 className="font-display text-lg font-semibold mb-1 text-center">Cast your vote</h2>
-          <p className="text-sm text-muted mb-6 text-center">Choose a nominated candidate.</p>
+          <h2 className="font-display text-lg font-semibold mb-1 text-center">
+            Cast your vote
+          </h2>
+          <p className="text-sm text-muted mb-6 text-center">
+            Choose a nominated candidate.
+          </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {CANDIDATE_NAMES.map((name, i) => {
@@ -231,7 +304,9 @@ function App() {
                   type="button"
                   onClick={() => setCandidateName(name)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-gold ${
-                    isSelected ? "border-gold bg-ink ring-2 ring-gold" : "border-line bg-ink hover:border-muted"
+                    isSelected
+                      ? "border-gold bg-ink ring-2 ring-gold"
+                      : "border-line bg-ink hover:border-muted"
                   }`}
                 >
                   <span
@@ -260,18 +335,29 @@ function App() {
       {/* Results — sealed until all votes are in, or unlocked early by admin */}
       <div className="max-w-2xl mx-auto px-6 mt-8 mb-16">
         <div className="bg-surface border border-line rounded-2xl p-6">
-          {isAdmin && !allVotesIn && (
-            <div className="flex items-center justify-between bg-violet/10 border border-violet rounded-lg px-4 py-2 mb-4">
+          {isAdmin && (
+            <div className="flex items-center justify-between flex-wrap gap-2 bg-violet/10 border border-violet rounded-lg px-4 py-2 mb-4">
               <span className="text-xs text-violet font-medium">
-                Admin view — results unlocked early
+                {allVotesIn
+                  ? "Admin tools"
+                  : "Admin view — results unlocked early"}
               </span>
-              <button
-                type="button"
-                onClick={exitAdminMode}
-                className="text-xs text-muted hover:text-ivory underline"
-              >
-                Exit admin
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={resetVoting}
+                  className="text-xs text-coral hover:text-ivory underline"
+                >
+                  Reset votes
+                </button>
+                <button
+                  type="button"
+                  onClick={exitAdminMode}
+                  className="text-xs text-muted hover:text-ivory underline"
+                >
+                  Exit admin
+                </button>
+              </div>
             </div>
           )}
 
@@ -280,27 +366,42 @@ function App() {
               <div className="w-12 h-12 mx-auto rounded-full bg-surface-raised flex items-center justify-center mb-3 text-xl">
                 🔒
               </div>
-              <h2 className="font-display text-lg font-semibold mb-1">Results sealed</h2>
+              <h2 className="font-display text-lg font-semibold mb-1">
+                Results sealed
+              </h2>
               <p className="text-sm text-muted">
-                Tallies unlock once all {totalVoters} votes are in — {totalVoters - votesCast} to go.
+                <p className="text-sm text-muted">
+                  Results will be reviewed once voting is complete.
+                </p>
+                {totalVoters} votes are in — {totalVoters - votesCast} to go.
               </p>
             </div>
           ) : (
             <div>
-              <h2 className="font-display text-lg font-semibold mb-4 text-center">Final Tally</h2>
+              <h2 className="font-display text-lg font-semibold mb-4 text-center">
+                Final Tally
+              </h2>
               <div className="space-y-3">
                 {[...state.candidates]
                   .sort((a, b) => b.votes - a.votes)
                   .map((candidate) => {
-                    const pct = votesCast === 0 ? 0 : Math.round((candidate.votes / votesCast) * 100);
-                    const isLeading = candidate.votes === maxVotes && maxVotes > 0;
+                    const pct =
+                      votesCast === 0
+                        ? 0
+                        : Math.round((candidate.votes / votesCast) * 100);
+                    const isLeading =
+                      candidate.votes === maxVotes && maxVotes > 0;
                     return (
                       <div key={candidate.name}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className={`text-sm ${isLeading ? "text-gold font-semibold" : "text-ivory"}`}>
+                          <span
+                            className={`text-sm ${isLeading ? "text-gold font-semibold" : "text-ivory"}`}
+                          >
                             {candidate.name}
                           </span>
-                          <span className="font-mono text-sm text-muted">{candidate.votes} votes</span>
+                          <span className="font-mono text-sm text-muted">
+                            {candidate.votes} votes
+                          </span>
                         </div>
                         <div className="h-2 rounded-full bg-surface-raised overflow-hidden">
                           <div
@@ -314,7 +415,9 @@ function App() {
                     );
                   })}
               </div>
-              <p className="text-center font-display text-xl font-bold text-gold mt-6">{winnerText}</p>
+              <p className="text-center font-display text-xl font-bold text-gold mt-6">
+                {winnerText}
+              </p>
             </div>
           )}
         </div>
@@ -334,10 +437,13 @@ function App() {
             </div>
           ) : (
             <>
-              <h3 className="font-display text-lg font-semibold mb-1">Confirm your vote</h3>
+              <h3 className="font-display text-lg font-semibold mb-1 text-white">
+                Confirm your vote
+              </h3>
               <p className="text-sm text-muted mb-6">
-                You're voting for <span className="text-gold font-medium">{candidateName}</span> as{" "}
-                {voterName}. This can't be changed once submitted.
+                You're voting for{" "}
+                <span className="text-gold font-medium">{candidateName}</span>{" "}
+                as {voterName}. This can't be changed once submitted.
               </p>
               <div className="flex gap-3">
                 <button
@@ -366,7 +472,9 @@ function App() {
         className="fixed inset-0 m-auto p-0 border-none outline-none bg-transparent backdrop:bg-black/60 max-w-none max-h-none"
       >
         <div className="w-80 bg-surface border border-line rounded-2xl p-6">
-          <h3 className="font-display text-lg font-semibold mb-1">Admin access</h3>
+          <h3 className="font-display text-lg font-semibold mb-1">
+            Admin access
+          </h3>
           <p className="text-sm text-muted mb-4">
             Enter the admin password to unlock results early.
           </p>
@@ -384,12 +492,16 @@ function App() {
                 type="button"
                 onClick={() => setShowAdminPassword((prev) => !prev)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ivory transition-colors"
-                aria-label={showAdminPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showAdminPassword ? "Hide password" : "Show password"
+                }
               >
                 {showAdminPassword ? "🙈" : "👁️"}
               </button>
             </div>
-            {adminError && <p className="text-xs text-coral mt-2">{adminError}</p>}
+            {adminError && (
+              <p className="text-xs text-coral mt-2">{adminError}</p>
+            )}
             <div className="flex gap-3 mt-4">
               <button
                 type="submit"
