@@ -3,9 +3,6 @@ import { castVote as castVoteLogic, createInitialState } from "./logic";
 
 const STORAGE_KEY = "voting-ui-state";
 
-// Reads the voting state from localStorage.
-// Still async (returns a Promise) so it works with useQuery,
-// but there's no artificial delay — this is real localStorage, not a fake server.
 export async function fetchVotingState(
   voterNames: string[],
   candidateNames: string[]

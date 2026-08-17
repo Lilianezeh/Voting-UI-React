@@ -1,4 +1,4 @@
-import type { VotingState, CastVoteResult } from "./types.js";
+import type { VotingState, CastVoteResult } from "./types";
 
 export function createInitialState(voterNames: string[], candidateNames: string[]): VotingState {
   return {
