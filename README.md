@@ -2,6 +2,8 @@
 
 An "official ballot" themed voting UI for a Head of House election, built with React, TypeScript, Tailwind CSS, and TanStack Query.
 
+live url: voting-ui-with-react.netlify.app
+
 ## Features
 
 - Search-to-select voter identification (type a name to filter the roll)
